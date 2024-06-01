@@ -1,5 +1,5 @@
 # folder
-/codes/venv/*
+.venv/*
 /raspberrypi_v4l2/
 /raspberrypi_v4l2/.git
 *.tgz
