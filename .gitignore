@@ -6,3 +6,5 @@
 .vscode/
 data/
 downloads/
+old_codes/
+__pycache__/

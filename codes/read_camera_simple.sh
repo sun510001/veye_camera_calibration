@@ -2,10 +2,11 @@
  # @Author: sun510001 sqf121@gmail.com
  # @Date: 2024-05-31 23:04:45
  # @LastEditors: sun510001 sqf121@gmail.com
- # @LastEditTime: 2024-06-01 17:36:12
- # @FilePath: /camera/codes/read_camera_simple.sh
+ # @LastEditTime: 2024-06-08 23:48:33
+ # @FilePath: /veye_camera_calibration/codes/read_camera_simple.sh
  # @Description:
 ### 
+
 
 dmesg | grep veye && \
 echo "" && \
@@ -31,10 +32,39 @@ sleep .2 && \
 sleep .2 && \
 ./veye_mipi_i2c.sh -r -f mwbgain -b 4 && \
 sleep .2 && \
+./veye_mipi_i2c.sh -r -f mirrormode -b 4 && \
+sleep .2 && \
 ./veye_mipi_i2c.sh -r -f new_expmode -b 4 && \
 sleep .2 && \
 ./veye_mipi_i2c.sh -r -f new_mshutter -b 4 && \
 sleep .2 && \
 ./veye_mipi_i2c.sh -r -f new_mgain -b 4 && \
 sleep .2 && \
-./veye_mipi_i2c.sh -r -f auto_shutter_max -b 4
+./veye_mipi_i2c.sh -r -f auto_shutter_max -b 4 && \
+echo '' && \
+sleep .2 && \
+./veye_mipi_i2c.sh -r -f devid -b 6 && \
+sleep .2 && \
+./veye_mipi_i2c.sh -r -f hdver -b 6 && \
+sleep .2 && \
+./veye_mipi_i2c.sh -r -f sensorid -b 6 && \
+sleep .2 && \
+./veye_mipi_i2c.sh -r -f wdrmode -b 6 && \
+sleep .2 && \
+./veye_mipi_i2c.sh -r -f videoformat -b 6 && \
+sleep .2 && \
+./veye_mipi_i2c.sh -r -f awbgain -b 6 && \
+sleep .2 && \
+./veye_mipi_i2c.sh -r -f daynightmode -b 6 && \
+sleep .2 && \
+./veye_mipi_i2c.sh -r -f mwbgain -b 6 && \
+sleep .2 && \
+./veye_mipi_i2c.sh -r -f mirrormode -b 4 && \
+sleep .2 && \
+./veye_mipi_i2c.sh -r -f new_expmode -b 6 && \
+sleep .2 && \
+./veye_mipi_i2c.sh -r -f new_mshutter -b 6 && \
+sleep .2 && \
+./veye_mipi_i2c.sh -r -f new_mgain -b 6 && \
+sleep .2 && \
+./veye_mipi_i2c.sh -r -f auto_shutter_max -b 6
