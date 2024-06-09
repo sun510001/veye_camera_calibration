@@ -2,7 +2,7 @@
  * @Author: sun510001 sqf121@gmail.com
  * @Date: 2024-05-31 23:04:45
  * @LastEditors: sun510001 sqf121@gmail.com
- * @LastEditTime: 2024-06-02 17:17:29
+ * @LastEditTime: 2024-06-09 10:08:19
  * @FilePath: /camera/readme.md
  * @Description: 
 -->
@@ -34,5 +34,9 @@ Press 'q' to exit.
 ./video_record.sh
 ```
 
+# dual camera recording
+```python
+python codes/dual_camera_image_acquire.py
+```
 # Camera calibration
 TODO

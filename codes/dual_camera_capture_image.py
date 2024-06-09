@@ -4,7 +4,8 @@ Date: 2024-06-08 20:35:35
 LastEditors: sun510001 sqf121@gmail.com
 LastEditTime: 2024-06-08 23:53:24
 FilePath: /veye_camera_calibration/codes/dual_camera_image_acquire.py
-Description: Use a high-precision clock to send signals to the dual camera to achieve software synchronization.
+Description: Use a high-precision clock to send signals to the dual camera to achieve software synchronization
+and save images
 
 Copyright (c) 2024 by sqf, All Rights Reserved. 
 """
@@ -92,34 +93,7 @@ def save_images_periodically(
             print(f"Queue size after saving: {image_queue.qsize()}")
 
 
-def main():
-    mtime = datetime.datetime.now().strftime("%Y-%m-%d_%H_%M_%S")
-    save_image_folder = f"data/sync_{mtime}"  # 设置保存的文件夹
-
-    set_width = 1920
-    set_height = 1080
-    interval = 1 / 15  # 定时器间隔（秒）
-    save_interval = 1.0  # 保存间隔（秒）
-    camera_dev_list = ["/dev/video8", "/dev/video0"]  # 相机索引编号
-    max_workers = 1
-    max_size_buffer = 1
-
-    gstreamer_pipeline_list = []
-    for dev in camera_dev_list:
-        gstreamer_pipeline_list.append(
-            (
-                f"v4l2src device={dev} ! "
-                f"queue max-size-buffers={max_size_buffer} leaky=downstream ! "
-                f"video/x-raw, format=(string)UYVY, width={set_width}, height={set_height}, framerate={int(1/interval)}/1 ! "
-                "videoconvert ! "
-                "appsink"
-            )
-        )
-
-    os.makedirs(save_image_folder, exist_ok=True)
-
-    ##################################
-    
+def start_image_capturing():
     thread_list = []
     for cam_idx, gs_pipline in enumerate(gstreamer_pipeline_list):
         thread = threading.Thread(
@@ -158,6 +132,38 @@ def main():
         scheduler_thread.join()
         save_thread.join()
         print("All threads have been terminated.")
+
+    
+
+
+def main():
+    mtime = datetime.datetime.now().strftime("%Y-%m-%d_%H_%M_%S")
+    save_image_folder = f"data/sync_{mtime}"  # 设置保存的文件夹
+
+    set_width = 1920
+    set_height = 1080
+    interval = 1 / 15  # 定时器间隔（秒）
+    save_interval = 1.0  # 保存间隔（秒）
+    camera_dev_list = ["/dev/video8", "/dev/video0"]  # 相机索引编号
+    max_workers = 1
+    max_size_buffer = 1
+
+    gstreamer_pipeline_list = []
+    for dev in camera_dev_list:
+        gstreamer_pipeline_list.append(
+            (
+                f"v4l2src device={dev} ! "
+                f"queue max-size-buffers={max_size_buffer} leaky=downstream ! "
+                f"video/x-raw, format=(string)UYVY, width={set_width}, height={set_height}, framerate={int(1/interval)}/1 ! "
+                "videoconvert ! "
+                "appsink"
+            )
+        )
+
+    os.makedirs(save_image_folder, exist_ok=True)
+
+    ##################################
+    start_image_capturing()
 
 
 if __name__ == "__main__":
