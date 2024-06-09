@@ -5,7 +5,7 @@ LastEditors: sun510001 sqf121@gmail.com
 LastEditTime: 2024-06-08 23:53:24
 FilePath: /veye_camera_calibration/codes/dual_camera_image_acquire.py
 Description: Use a high-precision clock to send signals to the dual camera to achieve software synchronization
-and save images
+and save images.
 
 Copyright (c) 2024 by sqf, All Rights Reserved. 
 """
@@ -18,15 +18,12 @@ import cv2
 from queue import Queue, Empty
 from concurrent.futures import ThreadPoolExecutor
 
-# 定义全局事件，用于控制采图指令的发送
 capture_event = threading.Event()
-# 定义图像队列
 image_queue = Queue()
-sync_frame = 0  # 用于存储需要传递的变量
+sync_frame = 0
 
 
 def capture_image(cap):
-    # 获取一帧图像
     ret, frame = cap.read()
     if ret is None:
         print("Capture image failed.")
@@ -39,14 +36,12 @@ def capture_scheduler(interval):
     global sync_frame
     while True:
         time.sleep(interval)
-        capture_event.set()  # 发送采图指令
-        capture_event.clear()  # 清除事件，为下次采图做准备
+        capture_event.set()
+        capture_event.clear()
         sync_frame += 1
 
 
 def capture_camera(cam_idx, gstreamer_pipeline, set_width, set_height, image_queue):
-
-    # 通过索引打开设备
     cap = cv2.VideoCapture(gstreamer_pipeline, cv2.CAP_GSTREAMER)
 
     if not cap.isOpened():
@@ -60,7 +55,7 @@ def capture_camera(cam_idx, gstreamer_pipeline, set_width, set_height, image_que
     print("Current fps: %d fps" % framerate_get)
 
     while True:
-        capture_event.wait()  # 等待采图指令
+        capture_event.wait()  # waitting for capture signal
         image = capture_image(cap)
         if image is not None:
             image_queue.put([image, cam_idx, sync_frame])
@@ -76,7 +71,7 @@ def save_images_periodically(
 ):
     with ThreadPoolExecutor(
         max_workers=max_workers
-    ) as executor:  # 增加线程池中的工作线程数
+    ) as executor:  # Increase the number of worker threads in the thread pool.
         while True:
             time.sleep(save_interval)
             images_to_save = []
@@ -93,7 +88,15 @@ def save_images_periodically(
             print(f"Queue size after saving: {image_queue.qsize()}")
 
 
-def start_image_capturing():
+def start_image_capturing(
+    gstreamer_pipeline_list,
+    set_width,
+    set_height,
+    interval,
+    save_interval,
+    save_image_folder,
+    max_workers,
+):
     thread_list = []
     for cam_idx, gs_pipline in enumerate(gstreamer_pipeline_list):
         thread = threading.Thread(
@@ -133,18 +136,16 @@ def start_image_capturing():
         save_thread.join()
         print("All threads have been terminated.")
 
-    
-
 
 def main():
     mtime = datetime.datetime.now().strftime("%Y-%m-%d_%H_%M_%S")
-    save_image_folder = f"data/sync_{mtime}"  # 设置保存的文件夹
+    save_image_folder = f"data/sync_{mtime}"  # the folder of images
 
     set_width = 1920
     set_height = 1080
-    interval = 1 / 15  # 定时器间隔（秒）
-    save_interval = 1.0  # 保存间隔（秒）
-    camera_dev_list = ["/dev/video8", "/dev/video0"]  # 相机索引编号
+    interval = 1 / 15  # capture interval
+    save_interval = 1.0  # save image interval
+    camera_dev_list = ["/dev/video8", "/dev/video0"]  # camera device index
     max_workers = 1
     max_size_buffer = 1
 
@@ -162,8 +163,15 @@ def main():
 
     os.makedirs(save_image_folder, exist_ok=True)
 
-    ##################################
-    start_image_capturing()
+    start_image_capturing(
+        gstreamer_pipeline_list,
+        set_width,
+        set_height,
+        interval,
+        save_interval,
+        save_image_folder,
+        max_workers,
+    )
 
 
 if __name__ == "__main__":
