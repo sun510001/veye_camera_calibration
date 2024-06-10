@@ -39,7 +39,8 @@ def capture_scheduler(interval):
         sync_frame += 1
 
 
-def capture_camera(cam_idx, gstreamer_pipeline, set_width, set_height, image_queue):
+def capture_camera(cam_idx, gstreamer_pipeline, set_width, set_height):
+    global image_queue
     cap = cv2.VideoCapture(gstreamer_pipeline, cv2.CAP_GSTREAMER)
 
     if not cap.isOpened():
@@ -59,8 +60,8 @@ def capture_camera(cam_idx, gstreamer_pipeline, set_width, set_height, image_que
             image_queue.put([image, cam_idx, sync_frame])
 
 
-def display_images(image_queue, width, height, show_size):
-    global STOP_FLAG
+def display_images(width, height, show_size):
+    global STOP_FLAG, image_queue
     cam_images = {}
     resize_size = (int(width * show_size), int(height * show_size))
 
@@ -107,7 +108,6 @@ def start_image_capturing(
                 gs_pipline,
                 set_width,
                 set_height,
-                image_queue,
             ),
         )
         thread.start()
@@ -118,7 +118,7 @@ def start_image_capturing(
 
     save_thread = threading.Thread(
         target=display_images,
-        args=(image_queue, set_width, set_height, show_size),
+        args=(set_width, set_height, show_size),
     )
     save_thread.start()
 
