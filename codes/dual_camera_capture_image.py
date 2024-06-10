@@ -41,7 +41,8 @@ def capture_scheduler(interval):
         sync_frame += 1
 
 
-def capture_camera(cam_idx, gstreamer_pipeline, set_width, set_height, image_queue):
+def capture_camera(cam_idx, gstreamer_pipeline, set_width, set_height):
+    global image_queue
     cap = cv2.VideoCapture(gstreamer_pipeline, cv2.CAP_GSTREAMER)
 
     if not cap.isOpened():
@@ -61,14 +62,14 @@ def capture_camera(cam_idx, gstreamer_pipeline, set_width, set_height, image_que
             image_queue.put([image, cam_idx, sync_frame])
 
 
-def save_images(image, cam_idx, sync_frame, save_image_folder):
+def save_images(image, cam_idx, save_image_folder):
+    global sync_frame
     image_path = os.path.join(save_image_folder, f"{sync_frame:08}_cam{cam_idx}.jpg")
     cv2.imwrite(image_path, image)
 
 
-def save_images_periodically(
-    image_queue, save_interval, save_image_folder, max_workers
-):
+def save_images_periodically(save_interval, save_image_folder, max_workers):
+    global sync_frame, image_queue
     with ThreadPoolExecutor(
         max_workers=max_workers
     ) as executor:  # Increase the number of worker threads in the thread pool.
@@ -82,9 +83,7 @@ def save_images_periodically(
                     break
             if images_to_save:
                 for [image, cam_idx, sync_frame] in images_to_save:
-                    executor.submit(
-                        save_images, image, cam_idx, sync_frame, save_image_folder
-                    )
+                    executor.submit(save_images, image, cam_idx, save_image_folder)
             print(f"Queue size after saving: {image_queue.qsize()}")
 
 
@@ -106,7 +105,6 @@ def start_image_capturing(
                 gs_pipline,
                 set_width,
                 set_height,
-                image_queue,
             ),
         )
         thread.start()
@@ -118,7 +116,6 @@ def start_image_capturing(
     save_thread = threading.Thread(
         target=save_images_periodically,
         args=(
-            image_queue,
             save_interval,
             save_image_folder,
             max_workers,
