@@ -19,7 +19,7 @@ def get_current_time():
     return time.strftime("%Y-%m-%d_%H-%M-%S", time.localtime())
 
 
-def load_camera(cam_height, cam_width, gstreamer_pipeline, save_folder, framerate):
+def load_camera(cam_height, cam_width, gstreamer_pipeline, save_folder):
     fourcc = cv2.VideoWriter_fourcc(*"mp4v")
     cap = cv2.VideoCapture(gstreamer_pipeline, cv2.CAP_GSTREAMER)
 
@@ -45,7 +45,7 @@ def load_camera(cam_height, cam_width, gstreamer_pipeline, save_folder, framerat
             ret, frame = cap.read()
             if ret:
                 frame_num += 1
-                frame = cv2.flip(frame, 1)
+                # frame = cv2.flip(frame, 1)
 
                 frame_draw = frame.copy()
 
@@ -121,10 +121,10 @@ def main():
     framerate = 15
 
     max_size_buffer = 1  # The smaller the number, the stronger the real-time performance of the image queue.
-    device = "/dev/video8"
+    device = "/dev/video8"  # /dev/video8 left; /dev/video0 right
 
     # enable to save video and image if save_folder != ""
-    save_folder = "../data"
+    save_folder = "codes/camera_calibration/data"
     os.makedirs(save_folder, exist_ok=True)
 
     gstreamer_pipeline_lowfps = (

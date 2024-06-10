@@ -1,13 +1,13 @@
-'''
+"""
 Author: sqf
 Date: 2024-06-05 10:53:07
-LastEditors: Qifan Sun qifsun@tesla.com
-LastEditTime: 2024-06-05 22:28:32
-FilePath: /FV-PROJECTS/fv-bmp-bolt-tightening/camera_calibration/utils/video_extract_frames_single_file.py
+LastEditors: sun510001 sqf121@gmail.com
+LastEditTime: 2024-06-09 15:50:02
+FilePath: /veye_camera_calibration/codes/camera_calibration/utils/video_extract_frames_single_file.py
 Description: 单视频文件抽帧, 4线程抽帧时间比单线程抽帧减少50%.
 
 Copyright (c) 2024 by sqf, All Rights Reserved. 
-'''
+"""
 
 import os
 import cv2
@@ -22,7 +22,7 @@ def win_path_replace(path):
     :param path: 有问题路径
     :return: 修复后的路径
     """
-    return path.replace('\\', '/')
+    return path.replace("\\", "/")
 
 
 def split_frame_to_list(total_frame, part):
@@ -70,14 +70,16 @@ def split_frame_to_list(total_frame, part):
 #     return rotateCode
 
 
-def frame_extract_by_interval(video_path,
-                              save_path,
-                              time_set=3,
-                              start_frame=None,
-                              end_frame=None,
-                              frame_list=None,
-                              rotate_code=None,
-                              qulity=0):
+def frame_extract_by_interval(
+    video_path,
+    save_path,
+    time_set=3,
+    start_frame=None,
+    end_frame=None,
+    frame_list=None,
+    rotate_code=None,
+    qulity=0,
+):
     """
     根据帧数列表提取图片, 所有视频抽的帧放在一起
     :param video_path: 视频的全局路径
@@ -108,6 +110,7 @@ def frame_extract_by_interval(video_path,
     with tqdm.tqdm(total=total) as ext_bar:
         for index in range(0, int(total_frame) + 1):
             ret, frame = capture.read()  # frame是BGR格式
+            # frame = cv2.flip(frame, 1)
             if rotate_code is not None:  # 如果存在转动信息, 则转动图片
                 frame = cv2.rotate(frame, rotate_code)
 
@@ -116,8 +119,11 @@ def frame_extract_by_interval(video_path,
             if not ret:
                 print("\nWarning! Loss this frame.\n")
 
-            if (frame_list is None and start_frame <= index <= end_frame
-                    and index % interval == 0):
+            if (
+                frame_list is None
+                and start_frame <= index <= end_frame
+                and index % interval == 0
+            ):
                 save_frame = "{}/{}_{:08d}.jpg".format(
                     save_path,
                     video_name,
@@ -160,17 +166,25 @@ def init_process(g_var1, g_var2, g_var3, g_var4, g_var5):
     :return:
     """
     global video_path, output, time_set, rotateCode, qulity
-    video_path, output, time_set, rotateCode, qulity = g_var1, g_var2, g_var3, g_var4, g_var5
+    video_path, output, time_set, rotateCode, qulity = (
+        g_var1,
+        g_var2,
+        g_var3,
+        g_var4,
+        g_var5,
+    )
 
 
 def do_extract_frames(frames_list):
     try:
-        frame_extract_by_interval(video_path,
-                                  output,
-                                  time_set,
-                                  start_frame=frames_list[0],
-                                  end_frame=frames_list[1],
-                                  rotate_code=rotateCode)
+        frame_extract_by_interval(
+            video_path,
+            output,
+            time_set,
+            start_frame=frames_list[0],
+            end_frame=frames_list[1],
+            rotate_code=rotateCode,
+        )
     except BaseException as e:
         print(f"\nWarning! Frames: {frames_list} is not video type. Skip.\n")
         print("\nERROR: \n")
@@ -182,21 +196,20 @@ def init_args():
     parser.add_argument(
         "--video_path",
         type=str,
-        default=
-        "/Users/qifsun/Desktop/cv89_bmp_bolt_tightening/FV-PROJECTS/fv-bmp-bolt-tightening/camera_calibration/data/capture_2024-06-05_22-03-12.mp4",
-        help="存放视频文件的路径")
+        default="/home/sun/Desktop/codes/veye_camera_calibration/codes/camera_calibration/data/video8_capture_2024-06-09_16-41-35.mp4",
+        help="存放视频文件的路径",
+    )
     parser.add_argument(
         "--output_dir",
         type=str,
-        default=
-        "/Users/qifsun/Desktop/cv89_bmp_bolt_tightening/FV-PROJECTS/fv-bmp-bolt-tightening/camera_calibration/data/capture_2024-06-05_22-03-12",
-        help="存放抽帧图片的文件夹路径")
-    parser.add_argument("--time_set", type=int, default=2, help="1秒内抽取图片数量")
+        default="/home/sun/Desktop/codes/veye_camera_calibration/codes/camera_calibration/data/video8_capture_2024-06-09_16-41-35",
+        help="存放抽帧图片的文件夹路径",
+    )
+    parser.add_argument("--time_set", type=int, default=1, help="1秒内抽取图片数量")
     parser.add_argument("--proc", type=int, default=4, help="开启线程数")
-    parser.add_argument("--qulity",
-                        type=int,
-                        default=2,
-                        help="图片压缩率[0-9], 0为无损")
+    parser.add_argument(
+        "--qulity", type=int, default=2, help="图片压缩率[0-9], 0为无损"
+    )
     return parser.parse_args()
 
 
@@ -215,15 +228,17 @@ def main():
     capture.release()
     split_frame_list = split_frame_to_list(total_frame, proc)
 
-    with Pool(processes=proc,
-              initializer=init_process,
-              initargs=(
-                  video_path,
-                  output,
-                  time_set,
-                  rotateCode,
-                  qulity,
-              )) as pool:
+    with Pool(
+        processes=proc,
+        initializer=init_process,
+        initargs=(
+            video_path,
+            output,
+            time_set,
+            rotateCode,
+            qulity,
+        ),
+    ) as pool:
         pool.map(do_extract_frames, split_frame_list)
 
 

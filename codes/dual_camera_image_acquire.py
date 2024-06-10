@@ -18,6 +18,7 @@ from queue import Queue, Empty
 capture_event = threading.Event()
 image_queue = Queue()
 sync_frame = 0
+STOP_FLAG = False
 
 
 def capture_image(cap):
@@ -58,33 +59,33 @@ def capture_camera(cam_idx, gstreamer_pipeline, set_width, set_height, image_que
             image_queue.put([image, cam_idx, sync_frame])
 
 
-def display_images(image_queue):
-    frame_dict = {}
-    current_frame_num = 0
+def display_images(image_queue, width, height, show_size):
+    global STOP_FLAG
+    cam_images = {}
+    resize_size = (int(width * show_size), int(height * show_size))
+
+    windows_name = "Dual camera capture"
+    cv2.namedWindow(windows_name, cv2.WINDOW_NORMAL)
+    cv2.resizeWindow(windows_name, int(width * show_size * 2), int(height * show_size))
+
     while True:
         try:
-            image, cam_idx, frame_num = image_queue.get(timeout=1)
-            if frame_num == current_frame_num:
-                if frame_num not in frame_dict:
-                    frame_dict[frame_num] = {}
-                frame_dict[frame_num][cam_idx] = image
+            image, cam_idx, sync_frame_ = image_queue.get(timeout=1)
+            cam_images[cam_idx] = image
+            print(cam_idx, sync_frame_)
 
-                if len(frame_dict[frame_num]) == 2:  # 当两张图片都到达时
-                    combined_image = cv2.hconcat(
-                        [frame_dict[frame_num][0], frame_dict[frame_num][1]]
-                    )
-                    cv2.imshow("Combined Image", combined_image)
-                    if cv2.waitKey(1) & 0xFF == ord("q"):
-                        break
-                    del frame_dict[frame_num]  # 移除已显示的帧
-                    current_frame_num += 1  # 处理下一帧
-            else:
-                # 丢弃过期帧
-                while frame_num > current_frame_num:
-                    current_frame_num += 1
-                    if current_frame_num in frame_dict:
-                        del frame_dict[current_frame_num]
+            if len(cam_images) == 2:
+
+                image_left = cv2.resize(cam_images[0], resize_size)
+                image_right = cv2.resize(cam_images[1], resize_size)
+                combined_image = cv2.hconcat([image_left, image_right])
+                cv2.imshow("Combined Image", combined_image)
+                if cv2.waitKey(1) & 0xFF == ord("q"):
+                    STOP_FLAG = True
+                    break
+                cam_images.clear()
         except Empty:
+            print("Empty ...")
             continue
 
     cv2.destroyAllWindows()
@@ -94,6 +95,7 @@ def start_image_capturing(
     gstreamer_pipeline_list,
     set_width,
     set_height,
+    show_size,
     interval,
 ):
     thread_list = []
@@ -116,14 +118,11 @@ def start_image_capturing(
 
     save_thread = threading.Thread(
         target=display_images,
-        args=(image_queue,),
+        args=(image_queue, set_width, set_height, show_size),
     )
     save_thread.start()
 
-    try:
-        while True:
-            time.sleep(10)
-    except KeyboardInterrupt:
+    if STOP_FLAG:
         for thread in thread_list:
             thread.join()
         scheduler_thread.join()
@@ -135,8 +134,12 @@ def main():
     set_width = 1920
     set_height = 1080
     interval = 1 / 15  # capture interval
-    camera_dev_list = ["/dev/video8", "/dev/video0"]  # camera device index
+    camera_dev_list = [
+        "/dev/video8",
+        "/dev/video0",
+    ]  # camera device index; /dev/video8 left; /dev/video0 right
     max_size_buffer = 1
+    show_size = 0.5  # show image with 1/2 size
 
     gstreamer_pipeline_list = []
     for dev in camera_dev_list:
@@ -150,7 +153,9 @@ def main():
             )
         )
 
-    start_image_capturing(gstreamer_pipeline_list, set_width, set_height, interval)
+    start_image_capturing(
+        gstreamer_pipeline_list, set_width, set_height, show_size, interval
+    )
 
 
 if __name__ == "__main__":

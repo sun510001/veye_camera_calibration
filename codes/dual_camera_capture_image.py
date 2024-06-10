@@ -139,13 +139,18 @@ def start_image_capturing(
 
 def main():
     mtime = datetime.datetime.now().strftime("%Y-%m-%d_%H_%M_%S")
-    save_image_folder = f"data/sync_{mtime}"  # the folder of images
+    save_image_folder = (
+        f"codes/camera_calibration/data/sync_{mtime}"  # the folder of images
+    )
 
     set_width = 1920
     set_height = 1080
     interval = 1 / 15  # capture interval
     save_interval = 1.0  # save image interval
-    camera_dev_list = ["/dev/video8", "/dev/video0"]  # camera device index
+    camera_dev_list = [
+        "/dev/video8",
+        "/dev/video0",
+    ]  # camera device index; /dev/video8 left; /dev/video0 right
     max_workers = 1
     max_size_buffer = 1
 

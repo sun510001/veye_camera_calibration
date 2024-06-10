@@ -2,7 +2,7 @@
 Author: sqf
 Date: 2024-06-04 23:41:07
 LastEditors: Qifan Sun qifsun@tesla.com
-LastEditTime: 2024-06-05 22:55:16
+LastEditTime: 2024-06-07 09:58:45
 FilePath: /FV-PROJECTS/fv-bmp-bolt-tightening/camera_calibration/read_aruco_marker.py
 Description: read aruco markers in the picture(camera matrix needed)
 
@@ -17,7 +17,7 @@ MARKER_LENGTH = 0.011
 
 
 def draw(frame, intr_matrix, intr_coeffs):
-    aruco_dict = cv2.aruco.getPredefinedDictionary(cv2.aruco.DICT_6X6_250)
+    aruco_dict = cv2.aruco.getPredefinedDictionary(cv2.aruco.DICT_4X4_50)
     parameters = cv2.aruco.DetectorParameters()
     corners, ids, rejected_img_points = cv2.aruco.detectMarkers(
         frame, aruco_dict, parameters=parameters)
@@ -47,8 +47,8 @@ def load_video(video_path, save_folder, intr_matrix, intr_coeffs):
     while (cap.isOpened()):
         ret, frame = cap.read()
 
-        frame = cv2.flip(frame, 1)
-
+        # frame = cv2.flip(frame, 1)
+        press_key = cv2.waitKey(1) & 0xFF
         if ret == True:
             # save frames
             if save_folder != '':
@@ -61,17 +61,19 @@ def load_video(video_path, save_folder, intr_matrix, intr_coeffs):
             break
 
         frame_index += 1
-        cv2.waitKey(0)
+        if press_key == ord('q'):
+            break
 
     cap.release()
     cv2.destroyAllWindows()
 
 
 def main():
-    video = "/Users/qifsun/Desktop/cv89_bmp_bolt_tightening/FV-PROJECTS/fv-bmp-bolt-tightening/camera_calibration/data/capture_2024-06-05_20-48-41.mp4"
+    video = "/Users/qifsun/Desktop/cv89_bmp_bolt_tightening/FV-PROJECTS/fv-bmp-bolt-tightening/camera_calibration/data/0606_markers/cam1_video_20240607_095753.mp4"
     # image_folder = os.path.join("codes/camera_calibration/data/images", os.path.splitext(os.path.split(video)[1])[0])
     image_folder = ''
-    calibration_folder = "/Users/qifsun/Desktop/cv89_bmp_bolt_tightening/FV-PROJECTS/fv-bmp-bolt-tightening/camera_calibration/data/capture_2024-06-05_22-03-12"
+    calibration_folder = "/Users/qifsun/Desktop/cv89_bmp_bolt_tightening/FV-PROJECTS/fv-bmp-bolt-tightening/camera_calibration/data/0606_first_capture/cam0_video_20240606_130310"
+    # calibration_folder = "/Users/qifsun/Desktop/cv89_bmp_bolt_tightening/FV-PROJECTS/fv-bmp-bolt-tightening/camera_calibration/data/0606_first_capture/cam1_video_20240606_130545"
 
     retval, camera_matrix, dist_coeff, rvecs, tvecs = load_calib(
         calibration_folder)

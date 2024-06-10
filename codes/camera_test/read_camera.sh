@@ -1,4 +1,14 @@
 dmesg | grep veye && \
+###
+ # @Author: sqf
+ # @Date: 2024-06-09 00:03:13
+ # @LastEditors: sun510001 sqf121@gmail.com
+ # @LastEditTime: 2024-06-09 15:14:50
+ # @FilePath: /camera/codes/camera_test/read_camera.sh
+ # @Description: 
+ # 
+ # Copyright (c) 2024 by sqf, All Rights Reserved. 
+### 
 echo "" && \
 /home/sun/Desktop/camera/raspberrypi_v4l2/rpi5_scripts/find_entity.sh && \
 echo "" && \

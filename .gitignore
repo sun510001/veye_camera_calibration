@@ -2,9 +2,11 @@
 .venv/
 /raspberrypi_v4l2/
 /raspberrypi_v4l2/.git
-*.tgz
 .vscode/
 data/
 downloads/
 old_codes/
 __pycache__/
+
+# file
+*.tgz
