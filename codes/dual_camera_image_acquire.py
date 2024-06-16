@@ -153,7 +153,7 @@ def main():
         "/dev/video0",
     ]  # camera device index; /dev/video8 left; /dev/video0 right
     max_size_buffer = 1
-    show_size = 0.5  # show image with 1/2 size
+    show_size = 1 / 4  # show image with 1/2 size
     show_image_realtime = True
 
     gstreamer_pipeline_list = []
