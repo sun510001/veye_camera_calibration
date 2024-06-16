@@ -134,9 +134,7 @@ def main():
         "videoconvert ! "
         "appsink"
     )
-    load_camera(
-        cam_height, cam_width, gstreamer_pipeline_lowfps, save_folder, framerate
-    )
+    load_camera(cam_height, cam_width, gstreamer_pipeline_lowfps, save_folder)
 
 
 if __name__ == "__main__":
