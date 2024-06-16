@@ -64,9 +64,13 @@ def request_images(width, height, show_size, show_image_realtime):
     cam_images = {}
     resize_size = (int(width * show_size), int(height * show_size))
 
-    windows_name = "Combined Image"
-    cv2.namedWindow(windows_name, cv2.WINDOW_NORMAL)
-    cv2.resizeWindow(windows_name, int(width * show_size * 2), int(height * show_size))
+    if show_image_realtime:
+        windows_name = "Combined Image"
+        cv2.namedWindow(windows_name, cv2.WINDOW_NORMAL)
+        cv2.resizeWindow(
+            windows_name, int(width * show_size * 2), int(height * show_size)
+        )
+
     # frame_count = 0
     while True:
         try:
@@ -75,7 +79,7 @@ def request_images(width, height, show_size, show_image_realtime):
             # print(cam_idx, sync_frame_)
 
             if len(cam_images) == 2:
-                # process images
+                # process images ###########
                 if show_image_realtime:
                     image_left = cv2.resize(cam_images[0], resize_size)
                     image_right = cv2.resize(cam_images[1], resize_size)
@@ -83,6 +87,7 @@ def request_images(width, height, show_size, show_image_realtime):
                     cv2.imshow("Combined Image", combined_image)
                     if cv2.waitKey(1) & 0xFF == ord("q"):
                         break
+                ##############################
                 cam_images.clear()
         except Empty:
             print("Empty ...")
