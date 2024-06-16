@@ -16,9 +16,8 @@ from queue import Queue, Empty
 
 
 capture_event = threading.Event()
-image_queue = Queue()
+image_queue = Queue(maxsize=2)
 sync_frame = 0
-STOP_FLAG = False
 
 
 def capture_image(cap):
@@ -40,7 +39,7 @@ def capture_scheduler(interval):
 
 
 def capture_camera(cam_idx, gstreamer_pipeline, set_width, set_height):
-    global image_queue
+    global image_queue, sync_frame
     cap = cv2.VideoCapture(gstreamer_pipeline, cv2.CAP_GSTREAMER)
 
     if not cap.isOpened():
@@ -60,44 +59,46 @@ def capture_camera(cam_idx, gstreamer_pipeline, set_width, set_height):
             image_queue.put([image, cam_idx, sync_frame])
 
 
-def display_images(width, height, show_size):
-    global STOP_FLAG, image_queue
+def request_images(width, height, show_size, show_image_realtime):
+    global image_queue
     cam_images = {}
     resize_size = (int(width * show_size), int(height * show_size))
 
-    windows_name = "Dual camera capture"
+    windows_name = "Combined Image"
     cv2.namedWindow(windows_name, cv2.WINDOW_NORMAL)
     cv2.resizeWindow(windows_name, int(width * show_size * 2), int(height * show_size))
-
+    # frame_count = 0
     while True:
         try:
-            image, cam_idx, sync_frame_ = image_queue.get(timeout=1)
+            image, cam_idx, sync_frame_ = image_queue.get_nowait()
             cam_images[cam_idx] = image
-            print(cam_idx, sync_frame_)
+            # print(cam_idx, sync_frame_)
 
             if len(cam_images) == 2:
-
-                image_left = cv2.resize(cam_images[0], resize_size)
-                image_right = cv2.resize(cam_images[1], resize_size)
-                combined_image = cv2.hconcat([image_left, image_right])
-                cv2.imshow("Combined Image", combined_image)
-                if cv2.waitKey(1) & 0xFF == ord("q"):
-                    STOP_FLAG = True
-                    break
+                # process images
+                if show_image_realtime:
+                    image_left = cv2.resize(cam_images[0], resize_size)
+                    image_right = cv2.resize(cam_images[1], resize_size)
+                    combined_image = cv2.hconcat([image_left, image_right])
+                    cv2.imshow("Combined Image", combined_image)
+                    if cv2.waitKey(1) & 0xFF == ord("q"):
+                        break
                 cam_images.clear()
         except Empty:
             print("Empty ...")
             continue
 
-    cv2.destroyAllWindows()
+    if show_image_realtime:
+        cv2.destroyAllWindows()
 
 
-def start_image_capturing(
+def start_image_request(
     gstreamer_pipeline_list,
     set_width,
     set_height,
     show_size,
     interval,
+    show_image_realtime,
 ):
     thread_list = []
     for cam_idx, gs_pipline in enumerate(gstreamer_pipeline_list):
@@ -116,17 +117,25 @@ def start_image_capturing(
     scheduler_thread = threading.Thread(target=capture_scheduler, args=(interval,))
     scheduler_thread.start()
 
-    save_thread = threading.Thread(
-        target=display_images,
-        args=(set_width, set_height, show_size),
+    request_images_thread = threading.Thread(
+        target=request_images,
+        args=(set_width, set_height, show_size, show_image_realtime),
     )
-    save_thread.start()
+    request_images_thread.start()
 
-    if STOP_FLAG:
-        for thread in thread_list:
+    try:
+        while True:
+            time.sleep(1)
+    except KeyboardInterrupt:
+        pass
+    finally:
+        for t_index, thread in enumerate(thread_list):
             thread.join()
+            print(f"Camera thread {t_index} is terminated.")
         scheduler_thread.join()
-        save_thread.join()
+        print("Scheduler thread is terminated.")
+        request_images_thread.join()
+        print("Request thread is terminated.")
         print("All threads have been terminated.")
 
 
@@ -140,6 +149,7 @@ def main():
     ]  # camera device index; /dev/video8 left; /dev/video0 right
     max_size_buffer = 1
     show_size = 0.5  # show image with 1/2 size
+    show_image_realtime = True
 
     gstreamer_pipeline_list = []
     for dev in camera_dev_list:
@@ -153,8 +163,13 @@ def main():
             )
         )
 
-    start_image_capturing(
-        gstreamer_pipeline_list, set_width, set_height, show_size, interval
+    start_image_request(
+        gstreamer_pipeline_list,
+        set_width,
+        set_height,
+        show_size,
+        interval,
+        show_image_realtime,
     )
 
 
