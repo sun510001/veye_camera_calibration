@@ -15,11 +15,11 @@ import threading
 import time
 import datetime
 import cv2
-from queue import Queue, Empty
+from collections import deque
 from concurrent.futures import ThreadPoolExecutor
 
 capture_event = threading.Event()
-image_queue = Queue()
+image_queue = deque(maxlen=2)
 sync_frame = 0
 
 
@@ -39,6 +39,7 @@ def capture_scheduler(interval):
         capture_event.set()
         capture_event.clear()
         sync_frame += 1
+        print("Frame:", sync_frame)
 
 
 def capture_camera(cam_idx, gstreamer_pipeline, set_width, set_height):
@@ -59,7 +60,7 @@ def capture_camera(cam_idx, gstreamer_pipeline, set_width, set_height):
         capture_event.wait()  # waitting for capture signal
         image = capture_image(cap)
         if image is not None:
-            image_queue.put([image, cam_idx, sync_frame])
+            image_queue.append([image, cam_idx, sync_frame])
 
 
 def save_images(image, cam_idx, save_image_folder):
@@ -76,15 +77,11 @@ def save_images_periodically(save_interval, save_image_folder, max_workers):
         while True:
             time.sleep(save_interval)
             images_to_save = []
-            while not image_queue.empty():
-                try:
-                    images_to_save.append(image_queue.get_nowait())
-                except Empty:
-                    break
+            while image_queue:
+                images_to_save.append(image_queue.popleft())
             if images_to_save:
                 for [image, cam_idx, sync_frame] in images_to_save:
                     executor.submit(save_images, image, cam_idx, save_image_folder)
-            print(f"Queue size after saving: {image_queue.qsize()}")
 
 
 def start_image_capturing(
@@ -125,25 +122,30 @@ def start_image_capturing(
 
     try:
         while True:
-            time.sleep(10)
+            time.sleep(1)
     except KeyboardInterrupt:
-        for thread in thread_list:
+        pass
+    finally:
+        for t_index, thread in enumerate(thread_list):
             thread.join()
+            print(f"Camera thread {t_index} is terminated.")
         scheduler_thread.join()
+        print(f"Scheduler thread is terminated.")
         save_thread.join()
+        print(f"Request thread is terminated.")
         print("All threads have been terminated.")
 
 
 def main():
     mtime = datetime.datetime.now().strftime("%Y-%m-%d_%H_%M_%S")
     save_image_folder = (
-        f"codes/camera_calibration/data/sync_{mtime}"  # the folder of images
+        f"/home/sun/Desktop/camera/codes/data/sync_{mtime}"  # the folder of images
     )
 
     set_width = 1920
     set_height = 1080
     interval = 1 / 15  # capture interval
-    save_interval = 1.0  # save image interval
+    save_interval = 0.5  # save image interval
     camera_dev_list = [
         "/dev/video8",
         "/dev/video0",

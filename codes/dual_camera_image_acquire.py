@@ -12,13 +12,13 @@ Copyright (c) 2024 by sqf, All Rights Reserved.
 import threading
 import time
 import cv2
-from queue import Queue, Empty
+from collections import deque
 
 
 capture_event = threading.Event()
-image_queue = Queue(maxsize=2)
+image_queue = deque(maxlen=2)
 sync_frame = 0
-
+STOP_FLAG = False
 
 def capture_image(cap):
     ret, frame = cap.read()
@@ -30,16 +30,19 @@ def capture_image(cap):
 
 
 def capture_scheduler(interval):
-    global sync_frame
+    global sync_frame, STOP_FLAG
     while True:
         time.sleep(interval)
         capture_event.set()
         capture_event.clear()
         sync_frame += 1
+        # print("Frame:", sync_frame)
+        if STOP_FLAG:
+            break
 
 
 def capture_camera(cam_idx, gstreamer_pipeline, set_width, set_height):
-    global image_queue, sync_frame
+    global image_queue, sync_frame, STOP_FLAG
     cap = cv2.VideoCapture(gstreamer_pipeline, cv2.CAP_GSTREAMER)
 
     if not cap.isOpened():
@@ -56,11 +59,13 @@ def capture_camera(cam_idx, gstreamer_pipeline, set_width, set_height):
         capture_event.wait()
         image = capture_image(cap)
         if image is not None:
-            image_queue.put([image, cam_idx, sync_frame])
+            image_queue.append([image, cam_idx, sync_frame])
+        if STOP_FLAG:
+            break
 
 
 def request_images(width, height, show_size, show_image_realtime):
-    global image_queue
+    global image_queue, STOP_FLAG
     cam_images = {}
     resize_size = (int(width * show_size), int(height * show_size))
 
@@ -73,8 +78,8 @@ def request_images(width, height, show_size, show_image_realtime):
 
     # frame_count = 0
     while True:
-        try:
-            image, cam_idx, sync_frame_ = image_queue.get_nowait()
+        if image_queue:
+            image, cam_idx, sync_frame_ = image_queue.popleft()
             cam_images[cam_idx] = image
             # print(cam_idx, sync_frame_)
 
@@ -86,11 +91,12 @@ def request_images(width, height, show_size, show_image_realtime):
                     combined_image = cv2.hconcat([image_left, image_right])
                     cv2.imshow("Combined Image", combined_image)
                     if cv2.waitKey(1) & 0xFF == ord("q"):
+                        STOP_FLAG = True
                         break
                 ##############################
                 cam_images.clear()
-        except Empty:
-            print("Empty ...")
+        else:
+            # print("Empty ...")
             continue
 
     if show_image_realtime:
@@ -122,32 +128,80 @@ def start_image_request(
     scheduler_thread = threading.Thread(target=capture_scheduler, args=(interval,))
     scheduler_thread.start()
 
-    request_images_thread = threading.Thread(
-        target=request_images,
-        args=(set_width, set_height, show_size, show_image_realtime),
-    )
-    request_images_thread.start()
+    ############################
+    # request_images_thread = threading.Thread(
+    #     target=request_images,
+    #     args=(set_width, set_height, show_size, show_image_realtime),
+    # )
+    # request_images_thread.start()
+    
+    #################################
+    global image_queue
+    cam_images = {}
+    resize_width = int(set_width * show_size)
+    resize_height = int(set_height * show_size)
 
-    try:
-        while True:
-            time.sleep(1)
-    except KeyboardInterrupt:
-        pass
-    finally:
-        for t_index, thread in enumerate(thread_list):
-            thread.join()
-            print(f"Camera thread {t_index} is terminated.")
-        scheduler_thread.join()
-        print("Scheduler thread is terminated.")
-        request_images_thread.join()
-        print("Request thread is terminated.")
-        print("All threads have been terminated.")
+    if show_image_realtime:
+        windows_name = "Combined Image"
+        cv2.namedWindow(windows_name, cv2.WINDOW_NORMAL)
+        cv2.resizeWindow(
+            windows_name, resize_width * 2, resize_height
+        )
+
+    # frame_count = 0
+    while True:
+        if image_queue:
+            # print("windows on")
+            image, cam_idx, sync_frame_ = image_queue.popleft()
+            cam_images[cam_idx] = image
+            print(cam_idx, sync_frame_)
+
+            if len(cam_images) == 2:
+                # process images ##############
+                
+                
+                
+                
+                # show images on the display ###
+                if show_image_realtime:
+                    image_left = cv2.resize(cam_images[0], (resize_width, resize_height))
+                    image_right = cv2.resize(cam_images[1], (resize_width, resize_height))
+                    combined_image = cv2.hconcat([image_left, image_right])
+                    cv2.imshow("Combined Image", combined_image)
+                    if cv2.waitKey(1) & 0xFF == ord("q"):
+                        STOP_FLAG = True
+                        break
+                #################################
+                cam_images.clear()
+        else:
+            # print("Empty ...")
+            continue
+
+    if show_image_realtime:
+        cv2.destroyAllWindows()
+    ########################################
+
+
+    while True:
+        time.sleep(1)
+        if STOP_FLAG:
+            print("Terminating threads ...")
+            for t_index, thread in enumerate(thread_list):
+                thread.join()
+                print(f"Camera thread {t_index} is terminated.")
+                
+            scheduler_thread.join()
+            print("Scheduler thread is terminated.")
+            # request_images_thread.join()
+            # print("Request thread is terminated.")
+            print("All threads have been terminated.")
+            break
 
 
 def main():
     set_width = 1920
     set_height = 1080
-    interval = 1 / 15  # capture interval
+    interval = 1 / 60  # capture interval
     camera_dev_list = [
         "/dev/video8",
         "/dev/video0",
